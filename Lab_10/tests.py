@@ -52,9 +52,6 @@ def acceptAccess(num, timestamp):
     print(f'{TerminalColors.GREEN}[{threadName}]  Accepted card with number: {num}, at time: {timeString}{TerminalColors.RESET}')
     ledsAccept(1)
     beepSequence(0.25, 0.25, 3)
-    # for _ in range(3):
-    #     beep(0.25)  # Short beep (0.1 seconds)
-    #     time.sleep(0.25)  # Pause between beeps
     
 def denyAccess(num, timestamp):
     timestampSeconds = timestamp / 1000
