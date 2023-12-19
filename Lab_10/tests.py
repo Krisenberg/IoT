@@ -26,7 +26,7 @@ def prepareAccessList():
     threadName = threading.current_thread().name
 
     while (flag):
-        userInput = input(f'[{threadName}, {timeString}]  Number: ')
+        userInput = input(f'\033[94m[{threadName}, {timeString}]  Number: \033[0m')
         if (userInput == ""):
             flag = False
         else:
@@ -46,7 +46,7 @@ def acceptAccess(num, timestamp):
     timestampSeconds = timestamp / 1000
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name
-    print(f'[{threadName}]  Accepted card with number: {num}, at time: {timeString}')
+    print(f'\033[92m[{threadName}]  Accepted card with number: {num}, at time: {timeString}\033[0m')
     ledsAccept(1)
     beepSequence(0.25, 0.25, 3)
     # for _ in range(3):
@@ -57,7 +57,7 @@ def denyAccess(num, timestamp):
     timestampSeconds = timestamp / 1000
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name
-    print(f'[{threadName}]  Denied card with number: {num}, at time: {timeString}')
+    print(f'\033[91m[{threadName}]  Denied card with number: {num}, at time: {timeString}\033[0m')
     ledsDeny(1)
 
 

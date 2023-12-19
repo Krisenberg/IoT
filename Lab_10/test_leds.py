@@ -8,19 +8,19 @@ def pixelsAccept():
     timestampSeconds = time.time()
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name
-    print(f'[{threadName}, {timeString}]  PIXELS BECAME GREEN')
+    print(f'\033[93m[{threadName}, {timeString}]  PIXELS BECAME GREEN\033[0m')
 
 def pixelsDeny():
     timestampSeconds = time.time()
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name
-    print(f'[{threadName}, {timeString}]  PIXELS BECAME RED')
+    print(f'\033[93m[{threadName}, {timeString}]  PIXELS BECAME RED\033[0m')
 
 def cleanPixels():
     timestampSeconds = time.time()
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name
-    print(f'[{threadName}, {timeString}]  pixels are clear')
+    print(f'\033[93m[{threadName}, {timeString}]  pixels are clear\033[0m')
 
 def ledsAccept(duration):
     pixelsAccept()

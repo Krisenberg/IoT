@@ -8,9 +8,9 @@ def sound(state):
     timestampMillis = time.time()
     threadName = threading.current_thread().name
     if state:
-        print(f'[{threadName}, {timestampMillis}]  Buzzer STARTS making sound')  # pylint: disable=no-member
+        print(f'\033[93m[{threadName}, {timestampMillis}]  Buzzer STARTS making sound\033[0m')  # pylint: disable=no-member
     else:
-        print(f'[{threadName}, {timestampMillis}]  Buzzer STOPS making sound')
+        print(f'\033[93m[{threadName}, {timestampMillis}]  Buzzer STOPS making sound\033[0m')
 
 def callback():
     sound(False)
