@@ -1,6 +1,8 @@
 import time
 import threading
 import datetime
+import logging
+from terminal_colors import TerminalColors
 
 def sound(state):
     timestampSeconds = time.time()
@@ -8,9 +10,9 @@ def sound(state):
     timestampMillis = time.time()
     threadName = threading.current_thread().name
     if state:
-        print(f'\033[93m[{threadName}, {timestampMillis}]  Buzzer STARTS making sound\033[0m')  # pylint: disable=no-member
+        logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timestampMillis}]  Buzzer STARTS making sound{TerminalColors.RESET}')  # pylint: disable=no-member
     else:
-        print(f'\033[93m[{threadName}, {timestampMillis}]  Buzzer STOPS making sound\033[0m')
+        logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timestampMillis}]  Buzzer STOPS making sound{TerminalColors.RESET}')
 
 def callback():
     sound(False)
