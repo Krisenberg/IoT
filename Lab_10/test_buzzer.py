@@ -5,8 +5,8 @@ import logging
 from terminal_colors import TerminalColors
 
 def sound(state):
-    timestampSeconds = time.time()
-    timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
+    # timestampSeconds = time.time()
+    # timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     timestampMillis = time.time()
     threadName = threading.current_thread().name
     if state:

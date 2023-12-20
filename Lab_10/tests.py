@@ -38,7 +38,7 @@ def prepareAccessList():
                 timestamp = int(time.time() * 1000)
                 cards.append((num, timestamp))
                 logging.info(f'{TerminalColors.YELLOW}Card number {num} has been added to the database.{TerminalColors.RESET}')
-                beep(0.5)
+                beepSequence(0.5, 0.0, 1)
                 time.sleep(0.5)
 
     cursor.executemany('INSERT INTO Access (CardID, Timestamp) VALUES (?,?)', cards)
