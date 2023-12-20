@@ -24,8 +24,8 @@ Solution described above was also rewritten to be tested without the Raspberry P
 
 #### Demo
 <p float='center'>
-  <img src='screenshots/db_config_demo.png' width='419' height='161'>
+  <img src='screenshots/db_config_demo.png' width='838' height='322'>
 </p>
 <p float='center'>
-  <img src='screenshots/program_demo.png' width='325' height='394'>
+  <img src='screenshots/program_demo.png' width='650' height='789'>
 </p>
