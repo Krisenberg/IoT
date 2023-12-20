@@ -18,9 +18,7 @@ def prepareAccessList():
               (CardID INTEGER PRIMARY KEY,
               Timestamp INTEGER)''')
     cards = []
-
     cardsNumSet = set()
-
     flag = True
 
     timestampSeconds = time.time()
@@ -62,12 +60,9 @@ def denyAccess(num, timestamp):
 
 
 def rfidRead():
-
     connection = sql.connect(DB_FILE_NAME)
     cursor = connection.cursor()
-
     flag = True
-
     timestampSeconds = time.time()
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
     threadName = threading.current_thread().name

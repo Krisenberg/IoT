@@ -77,22 +77,20 @@ def oledtest(disp):
 
     global sensorSelection, stopByRedButton, stopByGreenButton, exit
     fontLarge = ImageFont.truetype('./lib/oled/Font.ttf', 18)
-    selectedSelection = sensorSelection
-    
+
     while (not stopByRedButton or not stopByGreenButton):
-        print('BEFORE')
         if (int(time.time() * 1000) - BUTTON_PRESSED_COOLDOWN >= redButtonPressedTimestamp):
             stopByRedButton = False
         if (int(time.time() * 1000) - BUTTON_PRESSED_COOLDOWN >= greenButtonPressedTimestamp):
             stopByGreenButton = False
         exit = True if (stopByGreenButton and stopByRedButton) else False
-        print('AFTER')
-        
+
         if (exit):
-            print("EXITTTT")
+            return
         
         if (round(time.time() * 1000) - lastSelectionChange > backToTempPeriod):
             sensorSelection = 0
+
         image = Image.open(getImagePath())
         draw = ImageDraw.Draw(image)
         draw.text((12, 40), readSensor_twc(sensorSelection), font=fontLarge, fill="BLACK")

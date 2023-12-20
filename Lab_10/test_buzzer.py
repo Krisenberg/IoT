@@ -24,8 +24,9 @@ def beep(duration):
 
 def beepSequenceHelper(singleBeepDuration, pauseDuration, count):
     for _ in range(count):
+        # beep(singleBeepDuration)  # Short beep (0.1 seconds)
         sound(True)
-        time.sleep(singleBeepDuration)
+        time.sleep(singleBeepDuration)  # Pause between beeps
         callback()
         time.sleep(pauseDuration)
 

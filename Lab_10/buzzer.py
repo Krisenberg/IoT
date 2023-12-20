@@ -19,14 +19,8 @@ def sound(state):
 def callback():
     sound(False)
 
-# def beep(duration):
-#     sound(True)
-
-#     timer = threading.Timer(duration, callback) #calls the callback after 'duration' time in seconds
-#     timer.start()
 def beepSequenceHelper(singleBeepDuration, pauseDuration, count):
     for _ in range(count):
-        # beep(singleBeepDuration)  # Short beep (0.1 seconds)
         sound(True)
         time.sleep(singleBeepDuration)  # Pause between beeps
         callback()
