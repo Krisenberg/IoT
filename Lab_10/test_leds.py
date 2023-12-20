@@ -7,22 +7,19 @@ import logging
 from terminal_colors import TerminalColors
 
 def pixelsAccept():
-    timestampSeconds = time.time()
-    timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
+    timestampMillis = time.time()
     threadName = threading.current_thread().name
-    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timeString}]  PIXELS BECAME GREEN{TerminalColors.RESET}')
+    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timestampMillis}]  PIXELS ARE GREEN{TerminalColors.RESET}')
 
 def pixelsDeny():
-    timestampSeconds = time.time()
-    timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
+    timestampMillis = time.time()
     threadName = threading.current_thread().name
-    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timeString}]  PIXELS BECAME RED{TerminalColors.RESET}')
+    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timestampMillis}]  PIXELS ARE RED{TerminalColors.RESET}')
 
 def cleanPixels():
-    timestampSeconds = time.time()
-    timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
+    timestampMillis = time.time()
     threadName = threading.current_thread().name
-    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timeString}]  pixels are clear{TerminalColors.RESET}')
+    logging.info(f'{TerminalColors.YELLOW}[{threadName}, {timestampMillis}]  pixels are clear{TerminalColors.RESET}')
 
 def ledsAccept(duration):
     pixelsAccept()

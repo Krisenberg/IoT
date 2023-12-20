@@ -9,8 +9,11 @@ import sqlite3 as sql
 from threading import Thread
 import datetime
 import os
-from buzzer import beep
+import logging
+import threading
+from buzzer import beepSequence
 from leds import ledsAccept, ledsDeny
+from terminal_colors import TerminalColors
 
 stopByGreenButton = False
 stopByRedButton = False
@@ -61,7 +64,8 @@ def prepareAccessList():
                     cardsNumSet.add(num)
                     timestamp = int(time.time() * 1000)
                     cards.append((num, timestamp))
-                    beep(0.5)
+                    logging.info(f'{TerminalColors.YELLOW}Card number {num} has been added to the database.{TerminalColors.RESET}')
+                    beepSequence(0.5, 0.0, 1)
                     time.sleep(0.5)
 
     cursor.executemany('INSERT INTO Access (CardID, Timestamp) VALUES (?,?,?)', cards)
@@ -73,17 +77,17 @@ def prepareAccessList():
 def acceptAccess(num, timestamp):
     timestampSeconds = timestamp / 1000
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
-    print(f'Accepted card with number: {num}, at time: {timeString}')
+    threadName = threading.current_thread().name
+    print(f'{TerminalColors.GREEN}[{threadName}]  Accepted card with number: {num}, at time: {timeString}{TerminalColors.RESET}')
     ledsAccept(1)
-    for _ in range(3):
-        beep(0.25)  # Short beep (0.1 seconds)
-        time.sleep(0.25)  # Pause between beeps
+    beepSequence(0.25, 0.25, 3)
     
 
 def denyAccess(num, timestamp):
     timestampSeconds = timestamp / 1000
     timeString = datetime.datetime.fromtimestamp(timestampSeconds).strftime('%H:%M:%S')
-    print(f'Denied card with number: {num}, at time: {timeString}')
+    threadName = threading.current_thread().name
+    print(f'{TerminalColors.RED}[{threadName}]  Denied card with number: {num}, at time: {timeString}{TerminalColors.RESET}')
     ledsDeny(1)
 
 
@@ -123,9 +127,9 @@ def rfidRead():
 def delete_db_file():
     try:
         os.remove(DB_FILE_NAME)
-        print(f"{DB_FILE_NAME} deleted successfully.")
+        logging.info(f"{TerminalColors.YELLOW}{DB_FILE_NAME} deleted successfully.{TerminalColors.RESET}")
     except FileNotFoundError:
-        print(f"{DB_FILE_NAME} does not exist.")
+        logging.info(f"{TerminalColors.RED}{DB_FILE_NAME} does not exist.{TerminalColors.RESET}")
 
 def program():
     print('\nPlease configure the Database to store authorized RFIDs.')
