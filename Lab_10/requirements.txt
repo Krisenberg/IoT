@@ -1,1 +1,2 @@
-sudo pip3 install mfrc522
+# sudo pip3 install mfrc522
+mfrc522
