@@ -1,0 +1,3 @@
+ACCEPT_ACCESS_COOLDOWN = 5000 #time in millis
+BUTTON_PRESSED_COOLDOWN = 1500
+DB_FILE_NAME = 'rfid_server.db'
