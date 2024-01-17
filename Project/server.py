@@ -15,112 +15,98 @@ import threading
 from buzzer import beepSequence
 from leds import ledsAccept, ledsDeny
 from terminal_colors import TerminalColors
+from config_constants import *
 
-broker = "localhost"
-client = mqtt.Client()
+broker = SERVER_BROKER
+client_main_add = mqtt.Client()
+client_main_check_request = mqtt.Client()
+client_main_check_response = mqtt.Client()
 
-stopByGreenButton = False
-stopByRedButton = False
-greenButtonPressedTimestamp = 0
-redButtonPressedTimestamp = 0
-ACCEPT_ACCESS_COOLDOWN = 5000 #time in millis
-BUTTON_PRESSED_COOLDOWN = 1500
-DB_FILE_NAME = 'rfid_server_history.db'
-
-def redButtonPressedCallback(channel):
-    global stopByRedButton, redButtonPressedTimestamp
-    stopByRedButton = True
-    redButtonPressedTimestamp = int(time.time() * 1000)
-
-def greenButtonPressedCallback(channel):
-    global stopByGreenButton, greenButtonPressedTimestamp
-    stopByGreenButton = True
-    greenButtonPressedTimestamp = int(time.time() * 1000)
-
-def prepareHistoryDB():
-    try:
-        os.remove(DB_FILE_NAME)
-        logging.info(f"{TerminalColors.YELLOW}{DB_FILE_NAME} deleted successfully.{TerminalColors.RESET}")
-    except FileNotFoundError:
-        logging.info(f"{TerminalColors.RED}{DB_FILE_NAME} does not exist.{TerminalColors.RESET}")
-    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback=greenButtonPressedCallback, bouncetime=200)
-    connection = sql.connect(DB_FILE_NAME)
-    cursor = connection.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS History
-              (CardID text,
-              Timestamp text PRIMARY KEY,
-              Result text)''')
-    connection.commit()
-    connection.close()
     
-def addEntryToHistory(client, userdata, message,):
-    message_decoded = (str(message.payload.decode("utf-8"))).split(".")
-    if message_decoded[0] != "Client connected" and message_decoded[0] != "Client disconnected":
+def check_card_request(client, userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if (len(message_decoded) > 1):
         num = message_decoded[0]
         timestamp = message_decoded[1]
-        result = message_decoded[2]
         connection = sql.connect(DB_FILE_NAME)
         cursor = connection.cursor()
-        cursor.execute('INSERT INTO History (CardID, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, result))
+        cursor.execute('SELECT * FROM Office_access WHERE Card_number = ?', (num,))
+        entry = cursor.fetchone()
+        if (entry):
+            cursor.execute('SELECT * FROM Office_entry_history WHERE Card_number = ? ORDER BY Timestamp DESC LIMIT 1', (num,))
+            entry = cursor.fetchone()
+            if (timestamp >= entry[1] + ACCEPT_ACCESS_COOLDOWN):
+                cursor.execute('INSERT INTO Office_entry_history (Card_number, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, ACCEPT_MESSAGE))
+                client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, ACCEPT_MESSAGE)
+                logging.info(f'{TerminalColors.GREEN} Accepted card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
+            else:
+                cursor.execute('INSERT INTO Office_entry_history (Card_number, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, DENY_MESSAGE))
+                client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, DENY_MESSAGE)
+                logging.info(f'{TerminalColors.RED} Denied card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
+            connection.commit()
+        else:
+            client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, DENY_MESSAGE)
+            logging.info(f'{TerminalColors.RED} Denied card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
+        connection.close()
+
+def add_card_to_trusted_cards(client, userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if (len(message_decoded) > 1):
+        num = message_decoded[0]
+        timestamp = message_decoded[1]
+        connection = sql.connect(DB_FILE_NAME)
+        cursor = connection.cursor()
+        cursor.execute('INSERT INTO Office_access (Card_number, Registered) VALUES (?,?)', (num, timestamp))
         connection.commit()
         connection.close()
-        if (result == "Accepted"):
-            print(f'{TerminalColors.GREEN} Accepted card with number: {num}, at time: {timestamp}{TerminalColors.RESET}')
-        else:
-            print(f'{TerminalColors.RED} Denied card with number: {num}, at time: {timestamp}{TerminalColors.RESET}')
-    else:
-        # print(message_decoded[0] + " : " + message_decoded[1])
-        print(message_decoded[0])
+        logging.info(f'{TerminalColors.YELLOW} Registered card with number: {num}, at time: {timestamp} as a trusted one.{TerminalColors.RESET}')
 
-def connect_to_broker():
-    client.connect(broker)
-    client.on_message = addEntryToHistory
-    client.loop_start()
-    client.subscribe("history/add")
+def connect_broker_office_entrance_add_subscriber():
+    client_main_add.connect(broker)
+    client_main_add.on_message = add_card_to_trusted_cards
+    client_main_add.loop_start()
+    client_main_add.subscribe(MAIN_TOPIC_ADD)
 
-def disconnect_from_broker():
-    client.loop_stop()
-    client.disconnect()
+def disconnect_broker_office_entrance_add_subscriber():
+    client_main_add.loop_stop()
+    client_main_add.disconnect()
 
-def list_10_history_entries(count):
-    print("-----------------------------------")
-    print(f'Last {count} entries:')
-    connection = sql.connect(DB_FILE_NAME)
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM History LIMIT ?', (count,))
-    entries = cursor.fetchall()
-    for i, entry in enumerate(entries):
-        print(f'{i+1}, {entry}')
-    connection.close()
+def connect_broker_office_entrance_check_request_subscriber():
+    client_main_check_request.connect(broker)
+    client_main_check_request.on_message = check_card_request
+    client_main_check_request.loop_start()
+    client_main_check_request.subscribe(MAIN_TOPIC_CHECK_REQUEST)
 
+def disconnect_broker_office_entrance_check_request_subscriber():
+    client_main_check_request.loop_stop()
+    client_main_check_request.disconnect()
+
+def connect_broker_office_entrance_check_response_publisher():
+    client_main_check_response.connect(broker)
+
+def disconnect_broker_office_entrance_check_response_publisher():
+    client_main_check_response.disconnect()
 
 def mainLoop():
     flag = True
 
     while(flag):
-        user_input = input("Input: ")
+        user_input = input()
         if (user_input == "exit"):
             flag = False
-        if (user_input == "l"):
-            list_10_history_entries(10)
 
 def run_server():
-    prepareHistoryDB()
-    connect_to_broker()
+    logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
+
+    connect_broker_office_entrance_add_subscriber()
+    connect_broker_office_entrance_check_request_subscriber()
+    connect_broker_office_entrance_check_response_publisher()
+
     mainLoop()
-    disconnect_from_broker()
+
+    disconnect_broker_office_entrance_add_subscriber()
+    disconnect_broker_office_entrance_check_request_subscriber()
+    disconnect_broker_office_entrance_check_response_publisher()
 
 if __name__ == "__main__":
     run_server()
-
-
-# def addCartToDB(num, timestamp):
-#     connection = sql.connect(DB_FILE_NAME)
-#     cursor = connection.cursor()
-#     cursor.execute('SELECT * FROM Access WHERE CardID = ?', (num,))
-#     entry = cursor.fetchone()
-#     if (entry):
-#         if (timestamp >= entry[1] + ACCEPT_ACCESS_COOLDOWN):
-#             cursor.execute('UPDATE Access SET Timestamp = ? WHERE CardID = ?', (timestamp, num))
-#             connection.commit()
-#             acceptAccess(num, timestamp)

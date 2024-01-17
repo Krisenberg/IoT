@@ -1,4 +1,4 @@
-# #!/usr/bin/env python3
+#!/usr/bin/env python3
 
 import sqlite3 as sql
 import os
@@ -21,7 +21,7 @@ def create_database():
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_room_access
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Card_id INTEGER,
+            Card_number text,
             PIN INTEGER,
             Registered text,
             CONSTRAINT fk_id
@@ -30,7 +30,7 @@ def create_database():
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_room_entry_history
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Card_id INTEGER,
+            Card_number text,
             Timestamp text,
             Result text,
             CONSTRAINT fk_id
@@ -39,7 +39,7 @@ def create_database():
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Office_entry_history
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Card_id INTEGER,
+            Card_number text,
             Timestamp text,
             Result text,
             CONSTRAINT fk_id
@@ -87,5 +87,3 @@ def print_data():
 if __name__ == '__main__':
     logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
     create_database()
-    fill_example_data()
-    print_data()
