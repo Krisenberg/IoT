@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 import sqlite3 as sql
 import os
@@ -14,6 +14,37 @@ def create_database():
     connection = sql.connect(const.DB_FILE_NAME)
     cursor = connection.cursor()
     
+    # cursor.execute('''CREATE TABLE IF NOT EXISTS Office_access
+    #         (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         Card_number text,
+    #         Registered text)''')
+    
+    # cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_room_access
+    #         (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         Card_ID text,
+    #         PIN INTEGER,
+    #         Registered text,
+    #         CONSTRAINT fk_id
+    #         FOREIGN KEY (Card_number)
+    #         REFERENCES Office_access(ID))''')
+    
+    # cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_room_entry_history
+    #         (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         Card_number text,
+    #         Timestamp text,
+    #         Result text,
+    #         CONSTRAINT fk_id
+    #         FOREIGN KEY (Card_id)
+    #         REFERENCES Secret_room_access(ID))''')
+    
+    # cursor.execute('''CREATE TABLE IF NOT EXISTS Office_entry_history
+    #         (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         Card_number text,
+    #         Timestamp text,
+    #         Result text,
+    #         CONSTRAINT fk_id
+    #         FOREIGN KEY (Card_id)
+    #         REFERENCES Office_access(ID))''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS Office_access
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Card_number text,
@@ -23,28 +54,19 @@ def create_database():
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Card_number text,
             PIN INTEGER,
-            Registered text,
-            CONSTRAINT fk_id
-            FOREIGN KEY (Card_id)
-            REFERENCES Office_access(ID))''')
+            Registered text)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_room_entry_history
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Card_number text,
             Timestamp text,
-            Result text,
-            CONSTRAINT fk_id
-            FOREIGN KEY (Card_id)
-            REFERENCES Secret_room_access(ID))''')
+            Result text)''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Office_entry_history
             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
             Card_number text,
             Timestamp text,
-            Result text,
-            CONSTRAINT fk_id
-            FOREIGN KEY (Card_id)
-            REFERENCES Office_access(ID))''')
+            Result text)''')
 
     connection.commit()
     connection.close()
@@ -60,8 +82,6 @@ def fill_example_data():
     cursor.execute('INSERT INTO Office_access (Card_number, Registered) VALUES (?,?)', ('000264711',iso_formatted_timestamp,))
     card_1_id = cursor.execute('SELECT ID FROM Office_access WHERE Card_number = ?', ('000266545',)).fetchone()[0]
     card_2_id = cursor.execute('SELECT ID FROM Office_access WHERE Card_number = ?', ('000264711',)).fetchone()[0]
-    cursor.execute('INSERT INTO Secret_room_access (Card_id, PIN, Registered) VALUES (?,?,?)', (card_1_id,7,iso_formatted_timestamp,))
-    cursor.execute('INSERT INTO Secret_room_access (Card_id, PIN, Registered) VALUES (?,?,?)', (card_2_id,10,iso_formatted_timestamp,))
     # cursor.execute('INSERT INTO Secret_room_access (Card_id, PIN) VALUES (?,?)', ('000264711',10,))
     # cursor.execute('INSERT INTO Secret_room_access (ID,Card_id, PIN) VALUES (,?,?)', ('000266545'))
     # cursor.execute('INSERT INTO Secret_room_access (ID, Card_id, PIN) VALUES (,?,?)', ('000264711'))
