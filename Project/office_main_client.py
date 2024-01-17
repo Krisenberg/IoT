@@ -23,9 +23,9 @@ greenButtonPressedTimestamp = 0
 redButtonPressedTimestamp = 0
 
 broker = OFFICE_ENTRANCE_BROKER
-client_main_add = mqtt.Client()
-client_main_check_request = mqtt.Client()
-client_main_check_response = mqtt.Client()
+client_main_add = mqtt.Client(client_id='client_main_add')
+client_main_check_request = mqtt.Client(client_id='client_main_check_request')
+client_main_check_response = mqtt.Client(client_id='client_main_check_response')
 
 
 def redButtonPressedCallback(channel):
@@ -45,13 +45,12 @@ def runInThread(func):
     return wrapped
 
 def addNewTrustedCard():
-    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback=greenButtonPressedCallback, bouncetime=200)
-
-    global stopByGreenButton
     MIFAREReader = MFRC522()
     cardsNumSet = set()
 
-    while (not stopByGreenButton):
+    flag = True
+
+    while (flag):
         (status, TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
         if status == MIFAREReader.MI_OK:
             (status, uid) = MIFAREReader.MFRC522_Anticoll()
@@ -62,12 +61,11 @@ def addNewTrustedCard():
                 if num not in cardsNumSet:
                     cardsNumSet.add(num)
                     timestamp = int(time.time() * 1000)
-                    client_main_add.publish(MAIN_TOPIC_ADD, num + '&' + timestamp)
+                    client_main_add.publish(MAIN_TOPIC_ADD, f"{num}&{timestamp}")
                     beepSequence(0.5, 0.0, 1)
                     time.sleep(0.5)
+                    flag - False
 
-    GPIO.remove_event_detect(buttonGreen)
-    stopByGreenButton = False
     time.sleep(0.5)
 
 # def acceptAccess(num, timestamp):
@@ -131,7 +129,7 @@ def rfidRead():
                 for i in range(0, len(uid)):
                     num += uid[i] << (i*8)
                 timestamp = int(time.time() * 1000)
-                client_main_check_request.publish(MAIN_TOPIC_CHECK_REQUEST, num + '&' + timestamp,)
+                client_main_check_request.publish(MAIN_TOPIC_CHECK_REQUEST, str(num) + '&' + str(timestamp),)
 
 
 def connect_broker_office_entrance_add_publisher():

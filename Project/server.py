@@ -18,9 +18,9 @@ from terminal_colors import TerminalColors
 from config_constants import *
 
 broker = SERVER_BROKER
-client_main_add = mqtt.Client()
-client_main_check_request = mqtt.Client()
-client_main_check_response = mqtt.Client()
+client_main_add = mqtt.Client(client_id='server_main_add')
+client_main_check_request = mqtt.Client(client_id='server_main_check_request')
+client_main_check_response = mqtt.Client(client_id='server_main_check_response')
 
     
 def check_card_request(client, userdata, message,):
@@ -35,7 +35,7 @@ def check_card_request(client, userdata, message,):
         if (entry):
             cursor.execute('SELECT * FROM Office_entry_history WHERE Card_number = ? ORDER BY Timestamp DESC LIMIT 1', (num,))
             entry = cursor.fetchone()
-            if (timestamp >= entry[1] + ACCEPT_ACCESS_COOLDOWN):
+            if (not entry or timestamp >= entry[1] + ACCEPT_ACCESS_COOLDOWN):
                 cursor.execute('INSERT INTO Office_entry_history (Card_number, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, ACCEPT_MESSAGE))
                 client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, ACCEPT_MESSAGE)
                 logging.info(f'{TerminalColors.GREEN} Accepted card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
