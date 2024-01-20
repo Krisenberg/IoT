@@ -11,3 +11,8 @@ MAIN_TOPIC_CHECK_RESPONSE = 'main/check/response'
 
 ACCEPT_MESSAGE = 'Accepted'
 DENY_MESSAGE = 'Denied'
+
+ISO8601 = '%Y-%m-%d %H:%M:%S'
+
+GENERATE_TOKEN_PERIOD = 20 #time in SECONDS
+TOKEN_CHANGE_COOLDOWN = 5 #time in SECONDS
