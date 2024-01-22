@@ -23,7 +23,7 @@ def create_database():
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS Secret_1_access
             (card_id INTEGER PRIMARY KEY,
-            pin INTEGER,
+            pin TEXT,
             registered TEXT,
             CONSTRAINT s1a_fk
             FOREIGN KEY(card_id) REFERENCES Main_access(card_id))''')
@@ -44,42 +44,46 @@ def create_database():
     connection.close()
     logging.info(f"{TerminalColors.YELLOW}New database: {const.DB_FILE_NAME} created successfully.{TerminalColors.RESET}")
 
-def add_card_secret_1_access(card_number, pin):
+def add_card_secret_1_access(card_number, pin, timestamp):
     connection = sql.connect(const.DB_FILE_NAME)
     cursor = connection.cursor()
-    current_timestamp = datetime.now()
-    iso_formatted_timestamp = current_timestamp.strftime(const.ISO8601)
+    # current_timestamp = datetime.now()
+    # iso_formatted_timestamp = current_timestamp.strftime(const.ISO8601)
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
     res = cursor.fetchone()
     if not res:
-        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, iso_formatted_timestamp,))
+        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, timestamp,))
         cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
         res = cursor.fetchone()
     if res:
         cursor.execute('SELECT card_id FROM Secret_1_access WHERE card_id = ?', (res[0],))
         res_2 = cursor.fetchone()
         if not res_2:
-            cursor.execute('INSERT INTO Secret_1_access (card_id, pin, registered) VALUES (?,?,?)', (res[0], pin, iso_formatted_timestamp,))
+            cursor.execute('INSERT INTO Secret_1_access (card_id, pin, registered) VALUES (?,?,?)', (res[0], pin, timestamp,))
             connection.commit()
     connection.close()
 
-def add_card_main_access(card_number):
+def add_card_main_access(card_number, timestamp):
     connection = sql.connect(const.DB_FILE_NAME)
     cursor = connection.cursor()
-    current_timestamp = datetime.now()
-    iso_formatted_timestamp = current_timestamp.strftime(const.ISO8601)
+    # current_timestamp = datetime.now()
+    # iso_formatted_timestamp = current_timestamp.strftime(const.ISO8601)
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
     res = cursor.fetchone()
     if not res:
-        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, iso_formatted_timestamp,))
+        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, timestamp,))
         connection.commit()
     connection.close()
 
-def check_card_main_access(card_number):
+def check_register_card_main_access(card_number, timestamp):
     connection = sql.connect(const.DB_FILE_NAME)
     cursor = connection.cursor()
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
     res = cursor.fetchone()
+    result = 1 if res else 0
+
+    cursor.execute('INSERT INTO Main_history (card_number, timestamp, result) VALUES (?,?,?)', (card_number, timestamp, result))
+    connection.commit()
     connection.close()
     if res:
         return True

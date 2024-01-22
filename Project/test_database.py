@@ -34,7 +34,6 @@ def check_token(number_to_check):
 def config_parser():
     global parser
     parser.add_argument('-r', '--reader', help='Specify the card reader')
-    parser.add_argument('-tc', '--token-check', default=None, help='Check if provided token is correct')
     parser.add_argument('-lh', '--list-history', action='store_true', help='Print card presence history from the specified reader')
     parser.add_argument('-t', '--token', action='store_true', help='Print the current token')
     parser.add_argument('--exit', action='store_true', help='Terminate this program')
@@ -44,8 +43,8 @@ def program():
 
     program_exit_flag = False
 
-    # token_thread = threading.Thread(target=generate_tokens)
-    # token_thread.start()
+    token_thread = threading.Thread(target=generate_tokens)
+    token_thread.start()
 
     while not program_exit_flag:
         arguments = input('Command: ')
@@ -55,9 +54,9 @@ def program():
         elif args.token:
             token_change_datetime = datetime.datetime.fromtimestamp(token_change_timestamp).strftime('%c')
             print(f'Token [{token_change_datetime}]:\t{token}')
-        elif (args.token_check is not None):
-            print(args.token_check)
-            print(f'Token check:\t{check_token(int(args.token_check))}')
+        # elif (args.token_check is not None):
+        #     print(args.token_check)
+        #     print(f'Token check:\t{check_token(int(args.token_check))}')
         elif args.exit:
             print('Terminating the program...')
             program_exit_flag = True
@@ -65,12 +64,10 @@ def program():
             # token_thread.join()
         else:
             print(f'Unknown commands: {unknown}')
-
-if __name__ == '__main__':
-    token_thread = threading.Thread(target=generate_tokens)
-    token_thread.start()
-    program()
     exit_event.set()
     token_thread.join()
+
+if __name__ == '__main__':
+    program()
     print('----------------------------------')
     print('FINISHED')
