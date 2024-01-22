@@ -9,6 +9,10 @@ MAIN_TOPIC_ADD = 'main/add'
 MAIN_TOPIC_CHECK_REQUEST = 'main/check/request'
 MAIN_TOPIC_CHECK_RESPONSE = 'main/check/response'
 
+SECRET_TOPIC_ADD = 'secret/add'
+SECRET_TOPIC_CHECK_REQUEST = 'secret/check/request'
+SECRET_TOPIC_CHECK_RESPONSE = 'secret/check/response'
+
 ACCEPT_MESSAGE = 'Accepted'
 DENY_MESSAGE = 'Denied'
 
