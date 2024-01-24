@@ -1,66 +1,74 @@
+# pylint: disable=missing-module-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=import-error
+# pylint: disable=line-too-long
+
 import logging
-import sqlite3 as sql
-from config_constants import *
+import config_constants as const
 from terminal_colors import TerminalColors
 import database as db
-from server import client_main, check_token
+from server import client_main, client_secret_1, check_token
 
-def add_card_to_trusted_cards(client, userdata, message,):
+def add_card_to_trusted_main(_client, _userdata, message,):
     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-    if (len(message_decoded) > 1):
+    if len(message_decoded) == 2:
         num = message_decoded[0]
         timestamp = message_decoded[1]
         db.add_card_main_access(num, timestamp)
-        logging.info(f'{TerminalColors.BLUE}[Main_access]{TerminalColors.YELLOW} Registered card with number: {num}, at time: {timestamp} as a trusted one.{TerminalColors.RESET}')
 
-
-def add_card_to_secret_1(client, userdata, message,):
+def check_card_request_main(_client, _userdata, message,):
     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-    if (len(message_decoded) > 1):
-        num = message_decoded[0]
-        pin = message_decoded[1]
-        timestamp = message_decoded[2]
-        db.add_card_secret_1_access(num, pin, timestamp)
-        logging.info(f'{TerminalColors.YELLOW} Registered card with number: {num}, with pin{pin} at time: {timestamp} as a trusted one.{TerminalColors.RESET}')
-
-def check_card_request_main(client, userdata, message,):
-    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-    if (len(message_decoded) > 1):
+    if len(message_decoded) == 2:
         num = message_decoded[0]
         timestamp = message_decoded[1]
         check = db.check_register_card_main_access(num, timestamp)
         if check:
-            client_main.publish(MAIN_TOPIC_CHECK_RESPONSE, ACCEPT_MESSAGE)
+            client_main.publish(const.MAIN_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
         else:
-            client_main.publish(MAIN_TOPIC_CHECK_RESPONSE, DENY_MESSAGE)
+            client_main.publish(const.MAIN_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
 
-def check_rfid_token(client, userdata, message,):
-    message_decoded = (str(message.payload.decode("utf-8")))
-    if (len(message_decoded) > 1):
+def check_rfid_token_main(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 1:
         token = message_decoded[0]
         check = check_token(token)
         if check:
-            client_main.publish(TOKEN_CHECK_RESPONSE, ACCEPT_MESSAGE)
+            client_main.publish(const.MAIN_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
         else:
-            client_main.publish(TOKEN_CHECK_RESPONSE, DENY_MESSAGE)
+            client_main.publish(const.MAIN_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
 
-        # connection = sql.connect(DB_FILE_NAME)
-        # cursor = connection.cursor()
-        # cursor.execute('SELECT * FROM Office_access WHERE Card_number = ?', (num,))
-        # entry = cursor.fetchone()
-        # if (entry):
-        #     cursor.execute('SELECT * FROM Office_entry_history WHERE Card_number = ? ORDER BY Timestamp DESC LIMIT 1', (num,))
-        #     entry = cursor.fetchone()
-        #     if (not entry or timestamp >= entry[1] + ACCEPT_ACCESS_COOLDOWN):
-        #         cursor.execute('INSERT INTO Office_entry_history (Card_number, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, ACCEPT_MESSAGE))
-        #         client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, ACCEPT_MESSAGE)
-        #         logging.info(f'{TerminalColors.GREEN} Accepted card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
-        #     else:
-        #         cursor.execute('INSERT INTO Office_entry_history (Card_number, Timestamp, Result) VALUES (?,?,?)', (num, timestamp, DENY_MESSAGE))
-        #         client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, DENY_MESSAGE)
-        #         logging.info(f'{TerminalColors.RED} Denied card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
-        #     connection.commit()
-        # else:
-        #     client_main_check_response.publish(MAIN_TOPIC_CHECK_RESPONSE, DENY_MESSAGE)
-        #     logging.info(f'{TerminalColors.RED} Denied card with number: {num}, at time: {timestamp}.{TerminalColors.RESET}')
-        # connection.close()
+def add_card_to_trusted_secret(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 4:
+        sercet_id = message_decoded[0]
+        num = message_decoded[1]
+        pin = message_decoded[2]
+        timestamp = message_decoded[3]
+        db.add_card_secret_access(sercet_id, num, pin, timestamp)
+        logging.info('%s[Secret_1_access]%s Registered card with number: %s and %s at time: %s as a trusted one.%s',
+                     TerminalColors.BLUE, TerminalColors.YELLOW, num, pin, timestamp, TerminalColors.RESET)
+
+def check_card_request_secret(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 3:
+        sercet_id = message_decoded[0]
+        num = message_decoded[1]
+        pin = message_decoded[2]
+        timestamp = message_decoded[3]
+        check = db.check_register_card_secret_access(sercet_id, num, pin, timestamp)
+        if check:
+            client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
+
+def check_rfid_token_secret(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8")))
+    if len(message_decoded) == 2:
+        _ = message_decoded[0]
+        token = message_decoded[1]
+        check = check_token(token)
+        if check:
+            client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)

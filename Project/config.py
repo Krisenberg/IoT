@@ -1,5 +1,10 @@
+# pylint: disable=missing-module-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=import-error
+# pylint: disable=line-too-long
+
 #!/usr/bin/env python3
-# pylint: disable=no-member
 
 import RPi.GPIO as GPIO
 
