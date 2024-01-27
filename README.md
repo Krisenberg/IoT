@@ -1,7 +1,6 @@
 # IoT lab class
 Repo to store some files prepared for the IoT laboratory class.
 
-
 **Access Control Project with RFID Cards and MQTT Protocol
 **Project Description
 This project is an implementation of an access control system that allows you to manage access to various rooms using RFID cards and the MQTT protocol. This system can be customized for different needs and applications.
@@ -38,3 +37,13 @@ Hold an RFID card in front of the reader to open the door to the room.
 If an additional PIN is required, enter it on the OLED display and confirm with a button press.
 The system will automatically register the access and react accordingly (LED lights, sound, etc.).
 You can monitor access records via the MQTT broker or the user interface on the OLED display.
+
+## MQTT scheme
+<p float='center'>
+  <img src='images/erd.jpg'>
+</p>
+
+## Database diagram
+<p float='center'>
+  <img src='images/mqtt_scheme.jpg'>
+</p>

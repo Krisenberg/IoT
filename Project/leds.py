@@ -1,11 +1,17 @@
+# pylint: disable=missing-module-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=import-error
+# pylint: disable=line-too-long
+
 #!/usr/bin/env python3
 
-from config import *  # pylint: disable=unused-wildcard-import
-import board
-import neopixel
 import time
 import threading
 import logging
+import board
+import neopixel
+from config import *
 from terminal_colors import TerminalColors
 
 def pixelsAccept():
