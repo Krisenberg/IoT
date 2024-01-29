@@ -7,11 +7,12 @@
 #!/usr/bin/env python3
 
 import time
+import os
 from threading import Thread
 from datetime import datetime
 import logging
 import lib.oled.SSD1331 as SSD1331
-from config import GPIO, encoderLeft, encoderRight, buttonGreen, buttonRed
+from config import GPIO, encoderLeft, encoderRight, buttonGreen, buttonRed, ws2812pin
 from buzzer import beepSequence
 from leds import ledsAccept, ledsDeny
 from oled_screen import display_on_oled, set_oled, clear_oled
@@ -19,7 +20,8 @@ from terminal_colors import TerminalColors
 import config_constants as const
 from mqtt_clients import Client
 from mfrc522 import MFRC522
-
+import neopixel
+import board
 DISP = SSD1331.SSD1331()
 
 def proceed_token_check_response(_client, userdata, message,):
@@ -70,15 +72,46 @@ def encoder_callback(_, variables):
     elif variables['encoderRightPreviousState'] == 1 and encoder_right_current_state == 0:
         variables['encoderNumber'] -= 1
 
-    # Checking if in range [0-9]
-    variables['encoderNumber'] = max(0, min(9, variables['encoderNumber']))
+    time.sleep(0.05)
+    # Checking if in range [0-7]
+    variables['encoderNumber'] = max(0, min(7, variables['encoderNumber']))
 
-    variables['encoderLeftPreviousState'] = encoder_left_current_state
-    variables['encoderRightPreviousState'] = encoder_right_current_state
+    #dla próby
+    if variables['encoderLeftPreviousState'] != encoder_left_current_state:
+        variables['encoderLeftPreviousState'] = encoder_left_current_state
 
-    display_on_oled(disp=DISP,
-                    oled_cursor_position=variables['oledCursorPosition'],
-                    encoder_number=variables['encoderNumber'])
+    if variables['encoderRightPreviousState'] != encoder_right_current_state:
+        variables['encoderRightPreviousState'] = encoder_right_current_state
+
+    pixelShow(variables['encoderNumber'])
+    # display_on_oled(disp=DISP,
+    #                 oled_cursor_position=variables['oledCursorPosition'],
+    #                 encoder_number=variables['encoderNumber'])
+
+def pixelShow(pixelIndex):
+    pixels = neopixel.NeoPixel(board.D18, 8, brightness=1.0/32, auto_write=False)
+
+    #może generować mruganie, ale bardziej niezawodne, przy szybkim kręceniu encoderem -> prawdopodobnie trzeba tego użyć
+    #pixels.fill((0,0,0))
+    #pixels[pixelIndex] = (0, 0, 255)
+    #pixels.show()
+
+    pixels[(pixelIndex + 1) % 8] = (0, 0, 0)
+    pixels[pixelIndex] = (0, 0, 255)
+    pixels[(pixelIndex -1)] = (0, 0, 0)
+
+    pixels.show()
+
+def setPixels():
+    pixels = neopixel.NeoPixel(board.D18, 8, brightness=1.0/32, auto_write=False)
+    pixels.fill((0,0,0))
+    pixels[0] = (0, 0, 255)
+    pixels.show()
+
+def cleanPixels():
+    pixels = neopixel.NeoPixel(board.D18, 8, brightness=1.0/32, auto_write=False)
+    pixels.fill((0,0,0))
+    pixels.show()
 
 def accept_access():
     ledsAccept(1)
@@ -96,6 +129,7 @@ def write_pin(variables):
     pin = ""
     green_button_pressed_count = 0
     set_oled(disp=DISP)
+    display_on_oled(disp=DISP, imageChoice = variables['oledImage'])
 
     while green_button_pressed_count != 2:
         while not variables['clickedGreenButton']:
@@ -111,6 +145,7 @@ def write_pin(variables):
     return pin
 
 def add_new_trusted_card(client : Client, mifare_reader, variables):
+    variables['oledImage'] = "token"
     token_input = write_pin(variables)
     client.publish(const.MAIN_TOKEN_CHECK_REQUEST, token_input)
     logging.info('%sSent request to check the token: %s%s', TerminalColors.YELLOW, token_input, TerminalColors.RESET)
@@ -177,7 +212,8 @@ def run_main_client():
         'isTokenResponsePresent' : False,
         'tokenResponse' : const.DENY_MESSAGE,
         'encoderLeftPreviousState' : GPIO.input(encoderLeft),
-        'encoderRightPreviousState' : GPIO.input(encoderRight)
+        'encoderRightPreviousState' : GPIO.input(encoderRight),
+        'oledImage': ""
     }
 
     client = Client(
