@@ -13,7 +13,7 @@ import logging
 import argparse
 import random
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from mfrc522 import MFRC522
+# from mfrc522 import MFRC522
 import config_constants as const
 from mqtt_clients import Client
 from terminal_colors import TerminalColors
@@ -140,42 +140,7 @@ def check_rfid_token(_client, _userdata, message,):
             client_to_publish.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
         else:
             client_to_publish.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
-
-# def add_card_to_trusted_secret(_client, _userdata, message,):
-#     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-#     if len(message_decoded) == 4:
-#         sercet_id = message_decoded[0]
-#         num = message_decoded[1]
-#         pin = message_decoded[2]
-#         timestamp = message_decoded[3]
-#         db.add_card_secret_access(sercet_id, num, pin, timestamp)
-#         logging.info('%s[Secret_1_access]%s Registered card with number: %s and %s at time: %s as a trusted one.%s',
-#                      TerminalColors.BLUE, TerminalColors.YELLOW, num, pin, timestamp, TerminalColors.RESET)
-
-# def check_card_request_secret(_client, _userdata, message,):
-#     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-#     if len(message_decoded) == 3:
-#         sercet_id = message_decoded[0]
-#         num = message_decoded[1]
-#         pin = message_decoded[2]
-#         timestamp = message_decoded[3]
-#         check = db.check_register_card_secret_access(sercet_id, num, pin, timestamp)
-#         if check:
-#             client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
-#         else:
-#             client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
-
-# def check_rfid_token_secret(_client, _userdata, message,):
-#     message_decoded = (str(message.payload.decode("utf-8")))
-#     if len(message_decoded) == 2:
-#         _ = message_decoded[0]
-#         token = message_decoded[1]
-#         check = check_token(token)
-#         if check:
-#             client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
-#         else:
-#             client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
-
+            
 client_main = Client(
     client_id=0,
     is_main=True,
@@ -190,23 +155,23 @@ client_main = Client(
     logger=LOGGER
 )
 
-client_secret_1 = Client(
-    client_id=1,
-    is_main=False,
-    broker=const.SERVER_BROKER,
-    publisher_topics_list=[const.SECRET_TOPIC_CHECK_RESPONSE, const.SECRET_TOKEN_CHECK_RESPONSE],
-    subscribers_topic_to_func_dict={
-        const.MAIN_TOPIC_ADD : add_card_to_trusted,
-        const.MAIN_TOPIC_CHECK_REQUEST : check_card_request,
-        const.MAIN_TOKEN_CHECK_REQUEST : check_rfid_token
-    },
-    variables={},
-    logger=LOGGER
-)
+def create_client_secret(client_identifier):
+    return Client(
+        client_id=client_identifier,
+        is_main=False,
+        broker=const.SERVER_BROKER,
+        publisher_topics_list=[const.SECRET_TOPIC_CHECK_RESPONSE, const.SECRET_TOKEN_CHECK_RESPONSE],
+        subscribers_topic_to_func_dict={
+            const.MAIN_TOPIC_ADD : add_card_to_trusted,
+            const.MAIN_TOPIC_CHECK_REQUEST : check_card_request,
+            const.MAIN_TOKEN_CHECK_REQUEST : check_rfid_token
+        },
+        variables={},
+        logger=LOGGER
+    )
 
 mqtt_clients = {
-    0 : client_main,
-    1 : client_secret_1
+    0 : client_main
 }
 
 def generate_tokens():
@@ -229,6 +194,60 @@ def config_parser():
     PARSER.add_argument('-e', '--error', action="store_true", help="Set the logging level to ERROR")
     PARSER.add_argument('-c', '--critical', action="store_true", help="Set the logging level to CRITICAL")
     PARSER.add_argument('-h', '--help', action='store_true', help='Display help message')
+
+def list_table_entries():
+    LOGGER.disabled = True
+    print("\n\nTABLES")
+    print('-----------------------------------------------------------------')
+    index_to_table_name = {
+        1 : 'Main_access',
+        2 : 'Main_history'
+    }
+    index = 3
+    for number in mqtt_clients:
+        if not number == 0:
+            index_to_table_name[index] = f'Secret_{number}_access'
+            index += 1
+            index_to_table_name[index] = f'Secret_{number}_history'
+            index += 1
+
+    for i, table in index_to_table_name.items():
+        print("{:<10}{:<30}".format(f'[{i}]', table))
+
+    flag = True
+    while flag:
+        user_input = input("\nSELECTION: ")
+        how_many = input("HOW MANY ROWS (descending order by timestamp): ")
+
+        # Check if both inputs are numbers
+        if user_input.isdigit() and how_many.isdigit():
+            # Convert the inputs to integers and break out of the loop
+            user_input = int(user_input)
+            how_many = int(how_many)
+            flag = False
+        else:
+            print("Please enter valid numbers.")
+    entries = db.get_n_entries_from_table(table_name=index_to_table_name[user_input], n=how_many)
+    print('\nENTRIES')
+    print('-----------------------------------------------------------------')
+    if index_to_table_name[user_input].endswith('_history'):
+        print("{:<10}{:<10}{:<30}{:<10}".format('', 'CARD', 'TIMESTAMP', 'RESULT'))
+        print('-----------------------------------------------------------------')
+        for i, entry in enumerate(entries):
+            print("{:<10}{:<10}{:<30}{:<10}".format(f'[{i + 1}]', entry[0], entry[1], entry[2]))
+    elif index_to_table_name[user_input].startswith('Secret'):
+        print("{:<10}{:<10}{:<10}{:<30}".format('', 'CARD', 'PIN', 'TIMESTAMP'))
+        print('-----------------------------------------------------------------')
+        for i, entry in enumerate(entries):
+            print("{:<10}{:<10}{:<10}{:<30}".format(f'[{i + 1}]', entry[0], entry[1], entry[2]))
+    else:
+        print("{:<10}{:<10}{:<30}".format('', 'CARD', 'TIMESTAMP'))
+        print('-----------------------------------------------------------------')
+        for i, entry in enumerate(entries):
+            print("{:<10}{:<10}{:<30}".format(f'[{i + 1}]', entry[0], entry[1]))
+
+    input("\nPress ENTER to exit the list...")
+    LOGGER.disabled = False
 
 def custom_help():
     print("\n\n")
@@ -262,7 +281,7 @@ def run_admin_cli():
         arguments = input('')
         args, unknown = PARSER.parse_known_args(arguments.split())
         if args.list_history:
-            print('History print required!')
+            list_table_entries()
         elif args.token:
             token_change_datetime = datetime.datetime.fromtimestamp(TOKEN_DATA.token_change_timestamp).strftime(const.ISO8601)
             print(f'Token [{token_change_datetime}]:\t{TOKEN_DATA.token}')
@@ -292,7 +311,11 @@ threads = [token_thread, web_thread, input_thread]
 def run_server():
     logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
     config_parser()
-    # connect_mqtts()
+
+    for i in range(const.NUMBER_OF_SECRETS):
+        mqtt_clients[i+1] = create_client_secret(i+1)
+
+    connect_mqtts()
 
     for thr in threads:
         thr.start()
@@ -303,7 +326,7 @@ def run_server():
     for thr in threads:
         thr.join()
 
-    # disconnect_mqtts()
+    disconnect_mqtts()
 
 if __name__ == "__main__":
     run_server()

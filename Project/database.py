@@ -23,7 +23,7 @@ def create_database(number_of_secret):
     cursor.execute('''CREATE TABLE IF NOT EXISTS Main_access
             (card_id INTEGER PRIMARY KEY AUTOINCREMENT,
             card_number TEXT UNIQUE,
-            registered TEXT)''')
+            timestamp TEXT)''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS Main_history
             (entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +35,7 @@ def create_database(number_of_secret):
         cursor.execute(f'''CREATE TABLE IF NOT EXISTS Secret_{i+1}_access
             (card_id INTEGER PRIMARY KEY,
             pin TEXT,
-            registered TEXT,
+            timestamp TEXT,
             CONSTRAINT s1a_fk
             FOREIGN KEY(card_id) REFERENCES Main_access(card_id))''')
 
@@ -55,7 +55,7 @@ def add_card_main_access(card_number, timestamp, logger: Logger):
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
     res = cursor.fetchone()
     if not res:
-        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, timestamp,))
+        cursor.execute('INSERT INTO Main_access (card_number, timestamp) VALUES (?,?)', (card_number, timestamp,))
         connection.commit()
         logger.info('%s[Main_access]%s Registered card with number: %s, at time: %s as a trusted one.%s',
                      TerminalColors.BLUE, TerminalColors.YELLOW, card_number, timestamp, TerminalColors.RESET)
@@ -82,14 +82,14 @@ def add_card_secret_access(secret_id, card_number, pin, timestamp):
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
     res = cursor.fetchone()
     if not res:
-        cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, timestamp,))
+        cursor.execute('INSERT INTO Main_access (card_number, timestamp) VALUES (?,?)', (card_number, timestamp,))
         cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
         res = cursor.fetchone()
     if res:
         cursor.execute(f'SELECT card_id FROM Secret_{secret_id}_access WHERE card_id = ?', (res[0],))
         res_2 = cursor.fetchone()
         if not res_2:
-            cursor.execute(f'INSERT INTO Secret_{secret_id}_access (card_id, pin, registered) VALUES (?,?,?)', (res[0], pin, timestamp,))
+            cursor.execute(f'INSERT INTO Secret_{secret_id}_access (card_id, pin, timestamp) VALUES (?,?,?)', (res[0], pin, timestamp,))
             connection.commit()
     connection.close()
 
@@ -109,6 +109,25 @@ def check_register_card_secret_access(secret_id, card_number, pin, timestamp):
     connection.commit()
     connection.close()
     return result == 1
+
+def get_n_entries_from_table(table_name: str, n):
+    connection = sql.connect(const.DB_FILE_NAME)
+    cursor = connection.cursor()
+    # Ensure the table name is sanitized to prevent SQL injection
+    if not table_name.isidentifier():
+        raise ValueError("Invalid table name")
+
+    # Execute the SELECT query to retrieve n entries from the specified table
+    if table_name.endswith('_history'):
+        cursor.execute(f'''SELECT card_number, timestamp, result FROM {table_name} ORDER BY timestamp DESC LIMIT {n}''')
+    elif table_name.startswith('Secret'):
+        cursor.execute(f'''SELECT card_number, pin, S.timestamp FROM {table_name} S NATURAL JOIN Main_access M ORDER BY S.timestamp DESC LIMIT {n}''')
+    else:
+        cursor.execute(f'''SELECT card_number, timestamp FROM {table_name} ORDER BY timestamp DESC LIMIT {n}''')
+    # Fetch the results
+    entries = cursor.fetchall()
+    connection.close()
+    return entries
 
 # def register_card_presence_main(card_number):
 #     connection = sql.connect(const.DB_FILE_NAME)
