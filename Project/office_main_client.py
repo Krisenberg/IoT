@@ -27,7 +27,7 @@ DISP = SSD1331.SSD1331()
 def proceed_token_check_response(_client, userdata, message,):
     variables_dict = userdata['variables']
     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-    if len(message_decoded) == 1:
+    if len(message_decoded) >= 1:
         token_response = message_decoded[0]
         variables_dict['tokenResponse'] = token_response
         variables_dict['isTokenResponsePresent'] = True
@@ -36,11 +36,11 @@ def proceed_token_check_response(_client, userdata, message,):
             logging.info('Token check result: %s%s%s', TerminalColors.GREEN, const.ACCEPT_MESSAGE, TerminalColors.RESET)
         else:
             beepSequence(0.75, 0, 1)
-            logging.info('Token check result: %s%s%s', TerminalColors.RED, const.ACCEPT_MESSAGE, TerminalColors.RESET)
+            logging.info('Token check result: %s%s%s', TerminalColors.RED, const.DENY_MESSAGE, TerminalColors.RESET)
 
 def proceed_check_response(_client, _userdata, message,):
     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
-    if len(message_decoded) == 1:
+    if len(message_decoded) >= 1:
         check_response = message_decoded[0]
         if check_response==const.ACCEPT_MESSAGE:
             accept_access()
@@ -95,10 +95,10 @@ def pixelShow(pixelIndex):
     #pixels.fill((0,0,0))
     #pixels[pixelIndex] = (0, 0, 255)
     #pixels.show()
-
+    prev_index = (pixelIndex - 1) if (pixelIndex - 1) >=0 else 7
     pixels[(pixelIndex + 1) % 8] = (0, 0, 0)
     pixels[pixelIndex] = (0, 0, 255)
-    pixels[(pixelIndex -1)] = (0, 0, 0)
+    pixels[prev_index] = (0, 0, 0)
 
     pixels.show()
 
@@ -122,14 +122,13 @@ def deny_access():
     beepSequence(0.25, 0.25, 3)
 
 def write_pin(variables):
-    GPIO.add_event_detect(encoderLeft, GPIO.BOTH, callback=run_in_thread(encoder_callback, variables), bouncetime=100)
-    GPIO.add_event_detect(encoderRight, GPIO.BOTH, callback=run_in_thread(encoder_callback, variables), bouncetime=100)
+    GPIO.add_event_detect(encoderLeft, GPIO.BOTH, callback=run_in_thread(encoder_callback, variables), bouncetime=300)
+    GPIO.add_event_detect(encoderRight, GPIO.BOTH, callback=run_in_thread(encoder_callback, variables), bouncetime=300)
 
-    variables['oledCursorPosition'] = 0
     pin = ""
     green_button_pressed_count = 0
-    variables['oledImage'] = 'pin'
     set_oled(disp=DISP)
+    setPixels()
     display_on_oled(disp=DISP, image_name = variables['oledImage'])
 
     while green_button_pressed_count != 2:
@@ -137,26 +136,35 @@ def write_pin(variables):
             continue
         variables['clickedGreenButton'] = False
         pin += str(variables['encoderNumber'])
-        variables['oledCursorPosition'] += 1
         green_button_pressed_count += 1
+        setPixels()
+        variables['encoderNumber'] = 0
 
     clear_oled(disp=DISP)
+    cleanPixels()
     GPIO.remove_event_detect(encoderLeft)
     GPIO.remove_event_detect(encoderRight)
     return pin
 
 def add_new_trusted_card(client : Client, mifare_reader, variables):
-    token_input = write_pin(variables)
-    client.publish(const.MAIN_TOKEN_CHECK_REQUEST, token_input)
-    logging.info('%sSent request to check the token: %s%s', TerminalColors.YELLOW, token_input, TerminalColors.RESET)
+    variables['oledImage'] = 'token'
+    number_input = write_pin(variables)
+    if client.is_main:
+        client.publish(const.MAIN_TOKEN_CHECK_REQUEST, number_input)
+    else:
+        client.publish(const.SECRET_TOPIC_CHECK_REQUEST, number_input)
+
     while not variables['isTokenResponsePresent']:
         continue
     if variables['tokenResponse'] == const.ACCEPT_MESSAGE:
+        if not client.is_main:
+            variables['oledImage'] = 'pin'
+            number_input = write_pin(variables)
         card_registered_flag = False
+        variables['oledImage'] = 'rfid'
+        set_oled(disp=DISP)
+        display_on_oled(disp=DISP, image_name = variables['oledImage'])
         while(not variables['clickedRedButton'] and not card_registered_flag):
-            variables['oledImage'] = 'rfid'
-            set_oled(disp=DISP)
-            display_on_oled(disp=DISP, image_name = variables['oledImage'])
             (status, _) = mifare_reader.MFRC522_Request(mifare_reader.PICC_REQIDL)
             if status == mifare_reader.MI_OK:
                 (status, uid) = mifare_reader.MFRC522_Anticoll()
@@ -165,12 +173,17 @@ def add_new_trusted_card(client : Client, mifare_reader, variables):
                     for i, elem in enumerate(uid):
                         num += elem << (i*8)
                     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                    client.publish(const.MAIN_TOPIC_ADD, f'{num}&{timestamp}')
-                    logging.info('%sSent request to the server to register a card with number: %i at time: %s%s', TerminalColors.YELLOW, num, timestamp, TerminalColors.RESET)
+                    if client.is_main:
+                        client.publish(const.MAIN_TOPIC_ADD, f'{num}&{timestamp}')
+                    else:
+                        client.publish(const.SECRET_TOPIC_ADD, f'{num}&{number_input}&{timestamp}')
                     card_registered_flag = True
         clear_oled(disp=DISP)
+        if variables['clickedRedButton']:
+            logging.info('%sAborted the process of registering new trusted card%s', TerminalColors.RED, TerminalColors.RESET)
 
-def rfid_reader(client : Client, mifare_reader, cards_timestamps_dict):
+def rfid_reader(client : Client, mifare_reader, cards_timestamps_dict, variables):
+    number_input = 0
     (status, _) = mifare_reader.MFRC522_Request(mifare_reader.PICC_REQIDL)
     if status == mifare_reader.MI_OK:
         (status, uid) = mifare_reader.MFRC522_Anticoll()
@@ -178,19 +191,21 @@ def rfid_reader(client : Client, mifare_reader, cards_timestamps_dict):
             num = 0
             for i, elem in enumerate(uid):
                 num += elem << (i*8)
+            if not client.is_main:
+                variables['oledImage'] = 'pin'
+                number_input = write_pin(variables)
             timestamp = int(time.time() * 1000)
-            send_request_flag = True
-            if ((num in cards_timestamps_dict) and (timestamp - const.ACCEPT_ACCESS_COOLDOWN < cards_timestamps_dict[num])):
-                send_request_flag = False
-            if send_request_flag:
-                client.publish(const.MAIN_TOPIC_CHECK_REQUEST, f'{num}&{timestamp}')
-                logging.info('%sSent request to the server to check a card with number: %i at time: %s%s', TerminalColors.YELLOW, num, timestamp, TerminalColors.RESET)
+            if not ((num in cards_timestamps_dict) and (timestamp - const.ACCEPT_ACCESS_COOLDOWN < cards_timestamps_dict[num])):
+                if client.is_main:
+                    client.publish(const.MAIN_TOPIC_CHECK_REQUEST, f'{num}&{timestamp}')
+                else:
+                    client.publish(const.SECRET_TOPIC_CHECK_REQUEST, f'{num}&{number_input}&{timestamp}')
             cards_timestamps_dict[num] = timestamp
 
 def loop(client : Client, variables):
     mifare_reader = MFRC522()
 
-    cards_timestamps_dict = dict() # ! to be changed - regularly delete items from that dict
+    cards_timestamps_dict = {} # ! to be changed - regularly delete items from that dict
 
     while(not variables['clickedRedButton'] or not variables['clickedGreenButton']):
         if int(time.time() * 1000) - const.BUTTON_PRESSED_COOLDOWN >= variables['redButtonPressedTimestamp']:
@@ -201,34 +216,48 @@ def loop(client : Client, variables):
             variables['clickedRedButton'] = False
             add_new_trusted_card(client, mifare_reader, variables)
         else:
-            rfid_reader(client, mifare_reader, cards_timestamps_dict)
+            rfid_reader(client, mifare_reader, cards_timestamps_dict, variables)
 
-def run_main_client():
-    logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
-
+def run_client(client_identifier, is_main_client, client_logger):
     variables = {
         'clickedGreenButton' : False,
         'clickedRedButton' : False,
         'greenButtonPressedTimestamp' : 0,
         'redButtonPressedTimestamp' : 0,
-        'oledCursorPosition' : 0,
         'encoderNumber' : 0,
         'isTokenResponsePresent' : False,
         'tokenResponse' : const.DENY_MESSAGE,
         'encoderLeftPreviousState' : GPIO.input(encoderLeft),
         'encoderRightPreviousState' : GPIO.input(encoderRight),
-        'oledImage': ""
+        'oledImage': ''
     }
 
-    client = Client(
-        broker=const.SERVER_BROKER,
-        publisher_topics_list=[const.MAIN_TOPIC_ADD, const.MAIN_TOPIC_CHECK_REQUEST, const.MAIN_TOKEN_CHECK_REQUEST],
-        subscribers_topic_to_func_dict={
-            const.MAIN_TOPIC_CHECK_RESPONSE : proceed_check_response,
-            const.MAIN_TOKEN_CHECK_RESPONSE : proceed_token_check_response
-        },
-        variables=variables
-    )
+    if is_main_client:
+        client = Client(
+            client_id=client_identifier,
+            is_main=True,
+            broker=const.SERVER_BROKER,
+            publisher_topics_list=[const.MAIN_TOPIC_ADD, const.MAIN_TOPIC_CHECK_REQUEST, const.MAIN_TOKEN_CHECK_REQUEST],
+            subscribers_topic_to_func_dict={
+                const.MAIN_TOPIC_CHECK_RESPONSE : proceed_check_response,
+                const.MAIN_TOKEN_CHECK_RESPONSE : proceed_token_check_response
+            },
+            variables=variables,
+            logger=client_logger
+        )
+    else:
+        client = Client(
+            client_id=client_identifier,
+            is_main=False,
+            broker=const.SERVER_BROKER,
+            publisher_topics_list=[const.SECRET_TOPIC_ADD, const.SECRET_TOPIC_CHECK_REQUEST, const.SECRET_TOKEN_CHECK_REQUEST],
+            subscribers_topic_to_func_dict={
+                const.SECRET_TOPIC_CHECK_RESPONSE : proceed_check_response,
+                const.SECRET_TOKEN_CHECK_RESPONSE : proceed_token_check_response
+            },
+            variables=variables,
+            logger=client_logger
+        )
 
     client.connect_publishers()
     client.connect_subscribers()
@@ -241,7 +270,17 @@ def run_main_client():
     client.disconnect_publishers()
     client.disconnect_subscribers()
 
+    GPIO.remove_event_detect(buttonGreen)
+    GPIO.remove_event_detect(buttonRed)
     GPIO.cleanup()
 
 if __name__ == "__main__":
-    run_main_client()
+    CLIENT_ID = 1
+    IS_MAIN = False
+    logger_name = f'logger_client_{CLIENT_ID}'
+    logger = logging.getLogger(CLIENT_ID)
+    run_client(
+        client_identifier=CLIENT_ID,
+        is_main_client=IS_MAIN,
+        client_logger=logger
+    )

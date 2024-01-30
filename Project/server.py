@@ -13,11 +13,11 @@ import logging
 import argparse
 import random
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-# from mfrc522 import MFRC522
+from mfrc522 import MFRC522
 import config_constants as const
-# from mqtt_clients import Client, SecretClient
-# import server_functions as sf
+from mqtt_clients import Client
 from terminal_colors import TerminalColors
+import database as db
 
 class TokenData():
     def __init__(self):
@@ -33,7 +33,7 @@ class TokenData():
 
     def update_token(self):
         self.prev_token = self.token
-        self.token = random.randint(0,99)
+        self.token = random.randint(0,77)
         self.token_change_timestamp = time.time()
         timestamp_iso = datetime.datetime.fromtimestamp(self.token_change_timestamp).strftime(const.ISO8601)
         LOGGER.info('%sGenerated new token at %s:%s %s  --->  %s%s', TerminalColors.YELLOW, timestamp_iso, TerminalColors.RED, self.prev_token, self.token, TerminalColors.RESET)
@@ -86,32 +86,128 @@ LOGGER = logging.getLogger(__name__)
 
 SERVER_ADDRESS = ('', 8765)
 HTTPD = HTTPServer(SERVER_ADDRESS, CustomHandler)
-# HTTPD.timeout = 15
 
-# client_main = Client(
-#     broker=const.SERVER_BROKER,
-#     publisher_topics_list=[const.MAIN_TOPIC_CHECK_RESPONSE, const.MAIN_TOKEN_CHECK_RESPONSE],
-#     subscribers_topic_to_func_dict={
-#         const.MAIN_TOPIC_ADD : sf.add_card_to_trusted_main,
-#         const.MAIN_TOPIC_CHECK_REQUEST : sf.check_card_request_main,
-#         const.MAIN_TOKEN_CHECK_REQUEST : sf.check_rfid_token_main
-#     },
-#     variables={}
-# )
+def add_card_to_trusted(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 2:
+        num = message_decoded[0]
+        timestamp = message_decoded[1]
+        db.add_card_main_access(num, timestamp, LOGGER)
+    elif len(message_decoded) == 4:
+        client_id = message_decoded[0]
+        num = message_decoded[1]
+        pin = message_decoded[2]
+        timestamp = message_decoded[3]
+        db.add_card_secret_access(client_id, num, pin, timestamp)
 
-# client_secret_1 = SecretClient(
-#     client_id=1,
-#     broker=const.SERVER_BROKER,
-#     publisher_topics_list=[const.SECRET_TOPIC_CHECK_RESPONSE, const.SECRET_TOKEN_CHECK_RESPONSE],
-#     subscribers_topic_to_func_dict={
-#         const.SECRET_TOPIC_ADD : sf.add_card_to_trusted_secret,
-#         const.SECRET_TOPIC_CHECK_REQUEST : sf.check_card_request_secret,
-#         const.SECRET_TOKEN_CHECK_REQUEST : sf.check_rfid_token_secret
-#     },
-#     variables={}
-# )
+def check_card_request(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 2:
+        num = message_decoded[0]
+        timestamp = message_decoded[1]
+        check = db.check_register_card_main_access(num, timestamp)
+        if check:
+            client_main.publish(const.MAIN_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_main.publish(const.MAIN_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
+    elif len(message_decoded) == 4:
+        client_id = message_decoded[0]
+        num = message_decoded[1]
+        pin = message_decoded[2]
+        timestamp = message_decoded[3]
+        check = db.check_register_card_secret_access(client_id, num, pin, timestamp)
+        client_to_publish = mqtt_clients[int(client_id)]
+        if check:
+            client_to_publish.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_to_publish.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
 
-# mqtt_clients = [client_main, client_secret_1]
+def check_rfid_token(_client, _userdata, message,):
+    message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+    if len(message_decoded) == 1:
+        token = message_decoded[0]
+        check = check_token(token)
+        if check:
+            client_main.publish(const.MAIN_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_main.publish(const.MAIN_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
+    elif len(message_decoded) == 2:
+        client_id = message_decoded[0]
+        token = message_decoded[1]
+        check = check_token(token)
+        client_to_publish = mqtt_clients[int(client_id)]
+        if check:
+            client_to_publish.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+        else:
+            client_to_publish.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
+
+# def add_card_to_trusted_secret(_client, _userdata, message,):
+#     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+#     if len(message_decoded) == 4:
+#         sercet_id = message_decoded[0]
+#         num = message_decoded[1]
+#         pin = message_decoded[2]
+#         timestamp = message_decoded[3]
+#         db.add_card_secret_access(sercet_id, num, pin, timestamp)
+#         logging.info('%s[Secret_1_access]%s Registered card with number: %s and %s at time: %s as a trusted one.%s',
+#                      TerminalColors.BLUE, TerminalColors.YELLOW, num, pin, timestamp, TerminalColors.RESET)
+
+# def check_card_request_secret(_client, _userdata, message,):
+#     message_decoded = (str(message.payload.decode("utf-8"))).split("&")
+#     if len(message_decoded) == 3:
+#         sercet_id = message_decoded[0]
+#         num = message_decoded[1]
+#         pin = message_decoded[2]
+#         timestamp = message_decoded[3]
+#         check = db.check_register_card_secret_access(sercet_id, num, pin, timestamp)
+#         if check:
+#             client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+#         else:
+#             client_secret_1.publish(const.SECRET_TOPIC_CHECK_RESPONSE, const.DENY_MESSAGE)
+
+# def check_rfid_token_secret(_client, _userdata, message,):
+#     message_decoded = (str(message.payload.decode("utf-8")))
+#     if len(message_decoded) == 2:
+#         _ = message_decoded[0]
+#         token = message_decoded[1]
+#         check = check_token(token)
+#         if check:
+#             client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.ACCEPT_MESSAGE)
+#         else:
+#             client_secret_1.publish(const.SECRET_TOKEN_CHECK_RESPONSE, const.DENY_MESSAGE)
+
+client_main = Client(
+    client_id=0,
+    is_main=True,
+    broker=const.SERVER_BROKER,
+    publisher_topics_list=[const.MAIN_TOPIC_CHECK_RESPONSE, const.MAIN_TOKEN_CHECK_RESPONSE],
+    subscribers_topic_to_func_dict={
+        const.MAIN_TOPIC_ADD : add_card_to_trusted,
+        const.MAIN_TOPIC_CHECK_REQUEST : check_card_request,
+        const.MAIN_TOKEN_CHECK_REQUEST : check_rfid_token
+    },
+    variables={},
+    logger=LOGGER
+)
+
+client_secret_1 = Client(
+    client_id=1,
+    is_main=False,
+    broker=const.SERVER_BROKER,
+    publisher_topics_list=[const.SECRET_TOPIC_CHECK_RESPONSE, const.SECRET_TOKEN_CHECK_RESPONSE],
+    subscribers_topic_to_func_dict={
+        const.MAIN_TOPIC_ADD : add_card_to_trusted,
+        const.MAIN_TOPIC_CHECK_REQUEST : check_card_request,
+        const.MAIN_TOKEN_CHECK_REQUEST : check_rfid_token
+    },
+    variables={},
+    logger=LOGGER
+)
+
+mqtt_clients = {
+    0 : client_main,
+    1 : client_secret_1
+}
 
 def generate_tokens():
     while not EXIT_EVENT.is_set():
@@ -146,15 +242,16 @@ def custom_help():
     print("{:<10}{:<30}{}".format("-e", "--error", "Set the logging level to ERROR"))
     print("{:<10}{:<30}{}".format("-c", "--critical", "Set the logging level to CRITICAL"))
     print("\n\n")
-# def connect_mqtts():
-#     for client in mqtt_clients:
-#         client.connect_publishers()
-#         client.connect_subscribers()
 
-# def disconnect_mqtts():
-#     for client in mqtt_clients:
-#         client.disconnect_publishers()
-#         client.disconnect_subscribers()
+def connect_mqtts():
+    for _, client in mqtt_clients.items():
+        client.connect_publishers()
+        client.connect_subscribers()
+
+def disconnect_mqtts():
+    for _, client in mqtt_clients.items():
+        client.disconnect_publishers()
+        client.disconnect_subscribers()
 
 def run_threaded_web_server():
     while not EXIT_EVENT.is_set():

@@ -8,6 +8,7 @@
 import sqlite3 as sql
 import os
 import logging
+from logging import Logger
 import config_constants as const
 from terminal_colors import TerminalColors
 
@@ -48,7 +49,7 @@ def create_database(number_of_secret):
     connection.close()
     logging.info('%sNew database: %s created successfully.%s', TerminalColors.YELLOW, const.DB_FILE_NAME, TerminalColors.RESET)
 
-def add_card_main_access(card_number, timestamp):
+def add_card_main_access(card_number, timestamp, logger: Logger):
     connection = sql.connect(const.DB_FILE_NAME)
     cursor = connection.cursor()
     cursor.execute('SELECT card_id FROM Main_access WHERE card_number = ?', (card_number,))
@@ -56,10 +57,10 @@ def add_card_main_access(card_number, timestamp):
     if not res:
         cursor.execute('INSERT INTO Main_access (card_number, registered) VALUES (?,?)', (card_number, timestamp,))
         connection.commit()
-        logging.info('%s[Main_access]%s Registered card with number: %s, at time: %s as a trusted one.%s',
+        logger.info('%s[Main_access]%s Registered card with number: %s, at time: %s as a trusted one.%s',
                      TerminalColors.BLUE, TerminalColors.YELLOW, card_number, timestamp, TerminalColors.RESET)
     else:
-        logging.info('%s[Main_access]%s Card with number: %s already exists.%s',
+        logger.info('%s[Main_access]%s Card with number: %s already exists.%s',
                      TerminalColors.BLUE, TerminalColors.YELLOW, card_number, TerminalColors.RESET)
     connection.close()
 
