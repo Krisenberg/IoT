@@ -7,14 +7,14 @@ from PIL import Image, ImageDraw
 import lib.oled.SSD1331 as SSD1331
 DISP = SSD1331.SSD1331()
 
-def getImagePath(imageChoice):
-    if (imageChoice == 'pin'):
-        return './lib/oled/writePIN.png'
-    else:
-        return './lib/oled/writeToken.png'
-    
-def display_on_oled(disp, imageChoice):
-    image = Image.open(getImagePath(imageChoice))
+image_names_paths = {
+    'rfid' : './lib/oled/rfid.png',
+    'pin' : './lib/oled/writePIN.png',
+    'token' : './lib/oled/writeToken.png'
+}
+
+def display_on_oled(disp, image_name):
+    image = Image.open(image_names_paths[image_name])
     disp.ShowImage(image, 100, 100)
 
 def set_oled(disp):

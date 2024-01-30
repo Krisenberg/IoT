@@ -128,8 +128,9 @@ def write_pin(variables):
     variables['oledCursorPosition'] = 0
     pin = ""
     green_button_pressed_count = 0
+    variables['oledImage'] = 'pin'
     set_oled(disp=DISP)
-    display_on_oled(disp=DISP, imageChoice = variables['oledImage'])
+    display_on_oled(disp=DISP, image_name = variables['oledImage'])
 
     while green_button_pressed_count != 2:
         while not variables['clickedGreenButton']:
@@ -145,7 +146,6 @@ def write_pin(variables):
     return pin
 
 def add_new_trusted_card(client : Client, mifare_reader, variables):
-    variables['oledImage'] = "token"
     token_input = write_pin(variables)
     client.publish(const.MAIN_TOKEN_CHECK_REQUEST, token_input)
     logging.info('%sSent request to check the token: %s%s', TerminalColors.YELLOW, token_input, TerminalColors.RESET)
@@ -154,6 +154,9 @@ def add_new_trusted_card(client : Client, mifare_reader, variables):
     if variables['tokenResponse'] == const.ACCEPT_MESSAGE:
         card_registered_flag = False
         while(not variables['clickedRedButton'] and not card_registered_flag):
+            variables['oledImage'] = 'rfid'
+            set_oled(disp=DISP)
+            display_on_oled(disp=DISP, image_name = variables['oledImage'])
             (status, _) = mifare_reader.MFRC522_Request(mifare_reader.PICC_REQIDL)
             if status == mifare_reader.MI_OK:
                 (status, uid) = mifare_reader.MFRC522_Anticoll()
@@ -165,6 +168,7 @@ def add_new_trusted_card(client : Client, mifare_reader, variables):
                     client.publish(const.MAIN_TOPIC_ADD, f'{num}&{timestamp}')
                     logging.info('%sSent request to the server to register a card with number: %i at time: %s%s', TerminalColors.YELLOW, num, timestamp, TerminalColors.RESET)
                     card_registered_flag = True
+        clear_oled(disp=DISP)
 
 def rfid_reader(client : Client, mifare_reader, cards_timestamps_dict):
     (status, _) = mifare_reader.MFRC522_Request(mifare_reader.PICC_REQIDL)

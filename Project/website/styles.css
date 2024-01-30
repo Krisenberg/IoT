@@ -7,7 +7,10 @@
 }
 
 #blurred-background {
-    background: linear-gradient(to right, #1955fa85, #474b8656);
+    /* background-color: #4158D0;
+    background-image: linear-gradient(125deg, #4158D0 0%, #C850C0 59%, #FFCC70 100%); */
+    background-color: #6cb5fdbe;
+    background-image: linear-gradient(62deg, #6cb5fdbe 0%, #cfa0fccc 100%);
     backdrop-filter: blur(15px);
     border-radius: 15px;
     margin: 20px;
@@ -22,7 +25,7 @@
 
 h4 {
     color: rgb(255, 255, 255);
-    background-color: rgba(255, 255, 255, 0.116);
+    background-color: rgba(88, 88, 88, 0.404);
     border-radius: 10px;
     padding: 10px;
     padding-left: 30px;
@@ -30,5 +33,9 @@ h4 {
 }
 
 #progressBar {
-    accent-color: rgba(47, 118, 209, 0.959);
-  }
+    accent-color: rgba(82, 54, 136, 0.959);
+}
+
+#countdown {
+    font-size: smaller;
+}

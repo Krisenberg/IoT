@@ -62,7 +62,7 @@ class CustomHandler(SimpleHTTPRequestHandler):
                 content = file.read()
                 current_token = str(TOKEN_DATA.token)
                 timestamp = time.time()
-                time_to_token_change = (int) (TOKEN_DATA.token_change_timestamp + const.GENERATE_TOKEN_PERIOD - timestamp)
+                time_to_token_change = (int) (TOKEN_DATA.token_change_timestamp + const.GENERATE_TOKEN_PERIOD - timestamp - 3) # minus 3 because of the website reload time
                 js_time_to_change_set = f'var timeleft = {time_to_token_change};'
                 js_time_to_change_set_bytes = js_time_to_change_set.encode('utf-8')
                 js_code = f'$(document).ready(function() {{ $("#token").text({current_token}); }});'
@@ -76,6 +76,8 @@ class CustomHandler(SimpleHTTPRequestHandler):
         else:
             # If the path doesn't match, fall back to the default behavior
             super().do_GET()
+    def log_message(self, format, *args):
+        LOGGER.debug('%s%s%s - - [%s] %s', TerminalColors.YELLOW, self.address_string(), TerminalColors.RESET, self.log_date_time_string(), format%args)
 
 PARSER = argparse.ArgumentParser(description='Program for the RFiD card presence system administrator', add_help=False)
 TOKEN_DATA = TokenData()
@@ -160,7 +162,7 @@ def run_threaded_web_server():
 
 def run_admin_cli():
     while not EXIT_EVENT.is_set():
-        arguments = input('Command: ')
+        arguments = input('')
         args, unknown = PARSER.parse_known_args(arguments.split())
         if args.list_history:
             print('History print required!')
@@ -197,7 +199,7 @@ def run_server():
 
     for thr in threads:
         thr.start()
-    
+
     while not EXIT_EVENT.is_set():
         continue
 

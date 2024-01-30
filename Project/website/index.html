@@ -21,6 +21,7 @@
             <h4>CURRENT TOKEN</h4>
             <h2 id="token">Some value</h2>
             <progress value="0" id="progressBar"></progress>
+            <div id="countdown"></div>
         </div>
     </div>
     <script>
@@ -31,10 +32,13 @@
         var downloadTimer = setInterval(function(){
                 if(timeleft <= 0){
                     clearInterval(downloadTimer);
+                    document.getElementById("countdown").innerHTML = "RELOAD PAGE";
                     location.reload();
+                } else {
+                    document.getElementById("progressBar").value = timeLeftConst - timeleft;
+                    document.getElementById("countdown").innerHTML = timeleft + " SECONDS REMAINING";
+                    timeleft -= 1;
                 }
-                document.getElementById("progressBar").value = timeLeftConst - timeleft;
-                timeleft -= 1;
             }, 1000);
     </script>
 </body>
