@@ -1,13 +1,13 @@
 # IoT lab class
 
 > [!CAUTION]
-> To configure moquitto broker navigate to its configuration file (`/ect/mosquitto/mosquitto.conf`):
-> >  sudo nano /ect/mosquitto/mosquitto.conf
-> Add the following lines:
-> >  allow_anonymous true
-> >  listener 1883 0.0.0.0
-> Start the service:
-> >  sudo systemctl start mosquitto.service
+> To configure moquitto broker navigate to its configuration file (`/ect/mosquitto/mosquitto.conf`):  
+> >  sudo nano /ect/mosquitto/mosquitto.conf  
+> Add the following lines:  
+> >  allow_anonymous true  
+> >  listener 1883 0.0.0.0  
+> Start the service:  
+> >  sudo systemctl start mosquitto.service  
 
 ## Access Control Project with RFID Cards and MQTT Protocol
 ** Project Description
