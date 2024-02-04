@@ -5,9 +5,7 @@ BUTTON_PRESSED_COOLDOWN = 1500
 DB_FILE_NAME = 'rfid_server.db'
 NUMBER_OF_SECRETS = 1
 
-SERVER_BROKER = '10.33.108.127'
-OFFICE_ENTRANCE_BROKER = '10.33.108.127'
-SECRET_ROOM_BROKER = '10.33.108.127'
+SERVER_BROKER = '10.108.33.127'
 
 MAIN_TOPIC_ADD = 'main/add' # publisher: rfid, subscriber: server
 MAIN_TOPIC_CHECK_REQUEST = 'main/check/request' # publisher: rfid, subscriber: server

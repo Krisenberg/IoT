@@ -262,8 +262,8 @@ def run_client(client_identifier, is_main_client, client_logger):
     client.connect_publishers()
     client.connect_subscribers()
 
-    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback=run_in_thread(green_button_pressed_callback, variables), bouncetime=100)
-    GPIO.add_event_detect(buttonRed, GPIO.FALLING, callback=run_in_thread(red_button_pressed_callback, variables), bouncetime=100)
+    GPIO.add_event_detect(buttonGreen, GPIO.FALLING, callback=run_in_thread(green_button_pressed_callback, variables), bouncetime=300)
+    GPIO.add_event_detect(buttonRed, GPIO.FALLING, callback=run_in_thread(red_button_pressed_callback, variables), bouncetime=300)
 
     loop(client, variables)
 

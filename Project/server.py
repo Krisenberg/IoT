@@ -33,7 +33,9 @@ class TokenData():
 
     def update_token(self):
         self.prev_token = self.token
-        self.token = random.randint(0,77)
+        first_digit = random.randint(0,7)
+        second_digit = random.randint(0,7)
+        self.token = first_digit*10 + second_digit
         self.token_change_timestamp = time.time()
         timestamp_iso = datetime.datetime.fromtimestamp(self.token_change_timestamp).strftime(const.ISO8601)
         LOGGER.info('%sGenerated new token at %s:%s %s  --->  %s%s', TerminalColors.YELLOW, timestamp_iso, TerminalColors.RED, self.prev_token, self.token, TerminalColors.RESET)
@@ -162,9 +164,9 @@ def create_client_secret(client_identifier):
         broker=const.SERVER_BROKER,
         publisher_topics_list=[const.SECRET_TOPIC_CHECK_RESPONSE, const.SECRET_TOKEN_CHECK_RESPONSE],
         subscribers_topic_to_func_dict={
-            const.MAIN_TOPIC_ADD : add_card_to_trusted,
-            const.MAIN_TOPIC_CHECK_REQUEST : check_card_request,
-            const.MAIN_TOKEN_CHECK_REQUEST : check_rfid_token
+            const.SECRET_TOPIC_ADD : add_card_to_trusted,
+            const.SECRET_TOPIC_CHECK_REQUEST : check_card_request,
+            const.SECRET_TOKEN_CHECK_REQUEST : check_rfid_token
         },
         variables={},
         logger=LOGGER
